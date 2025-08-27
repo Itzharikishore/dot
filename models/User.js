@@ -1,131 +1,142 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
-const UserSchema = new mongoose.Schema({
-  // Basic Information
-  firstName: {
-    type: String,
-    required: [true, 'First name is required'],
-    trim: true,
-    maxlength: [50, 'First name cannot exceed 50 characters']
-  },
-  lastName: {
-    type: String,
-    required: [true, 'Last name is required'],
-    trim: true,
-    maxlength: [50, 'Last name cannot exceed 50 characters']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters']
-  },
-  phone: {
-    type: String,
-    trim: true
-  },
+const userSchema = new mongoose.Schema({
+  // ==================== BASIC INFO ====================
+  firstName: { type: String, required: true, trim: true, maxlength: 50 },
+  lastName: { type: String, required: true, trim: true, maxlength: 50 },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email'] },
+  password: { type: String, required: true, minlength: 6, select: false },
+
+  // ==================== ROLE & PERMISSIONS ====================
+  role: { type: String, enum: ['patient', 'parent', 'therapist', 'admin', 'superadmin'], default: 'patient' },
+
+  // ==================== CONTACT ====================
+  phoneNumber: { type: String, trim: true, match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please provide a valid phone number'], default: null },
   
-  // User Role and Status
-  role: {
-    type: String,
-    enum: ['child', 'parent', 'therapist', 'super_admin'],
-    required: true
+  // ==================== PERSONAL INFO ====================
+  dateOfBirth: { type: Date, validate: { validator: d => d <= new Date(), message: 'Date of birth cannot be in the future' } },
+  gender: { type: String, enum: ['male', 'female', 'other', 'prefer-not-to-say'] },
+
+  // ==================== PROFILE & MEDIA ====================
+  profilePicture: { type: String, default: '' },
+  bio: { type: String, maxlength: 500 },
+
+  // ==================== ADDRESS ====================
+  address: {
+    street: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    country: { type: String, default: '' },
+    zipCode: { type: String, default: '' }
   },
-  isActive: {
-    type: Boolean,
-    default: true
+
+  // ==================== ACCOUNT STATUS ====================
+  isActive: { type: Boolean, default: true },
+  isEmailVerified: { type: Boolean, default: false },
+  isPhoneVerified: { type: Boolean, default: false },
+
+  // ==================== RELATIONSHIPS ====================
+  childrenIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  assignedPatients: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  assignedTherapist: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  // ==================== TIMESTAMPS ====================
+  lastLogin: { type: Date },
+  lastLogout: { type: Date },
+
+  // ==================== THERAPY DATA ====================
+  therapyStartDate: { type: Date },
+  currentGoals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'TherapyGoal' }],
+
+  // ==================== NOTIFICATIONS ====================
+  notifications: {
+    email: { type: Boolean, default: true },
+    sms: { type: Boolean, default: false },
+    push: { type: Boolean, default: true },
+    activityReminders: { type: Boolean, default: true },
+    progressUpdates: { type: Boolean, default: true }
   },
-  
-  // Profile Information
-  avatar: {
-    type: String,
-    default: null
+
+  // ==================== SECURITY ====================
+  passwordResetToken: String,
+  passwordResetExpires: Date,
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+
+  // ==================== ACTIVITY TRACKING ====================
+  stats: {
+    totalActivitiesCompleted: { type: Number, default: 0 },
+    totalTimeSpent: { type: Number, default: 0 },
+    averageScore: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 }
   },
-  dateOfBirth: {
-    type: Date
-  },
-  
-  // Role-specific fields
-  childProfile: {
-    age: Number,
-    parentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    assignedTherapist: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    currentLevel: {
-      type: String,
-      enum: ['beginner', 'intermediate', 'advanced'],
-      default: 'beginner'
-    }
-  },
-  
-  parentProfile: {
-    children: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }]
-  },
-  
-  therapistProfile: {
-    specialization: [String],
-    assignedChildren: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }]
-  },
-  
-  // Device tokens for push notifications
-  deviceTokens: [{
-    token: String,
-    platform: {
-      type: String,
-      enum: ['android', 'ios', 'web']
-    },
-    lastUsed: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  
-  lastLogin: {
-    type: Date,
-    default: Date.now
+
+  // ==================== MEDICAL HISTORY ====================
+  medicalHistory: {
+    currentLevel: { type: String, default: 'beginner' },
+    totalActivitiesCompleted: { type: Number, default: 0 },
+    totalTherapyHours: { type: Number, default: 0 }
   }
 
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true, transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.passwordResetToken;
+    delete ret.emailVerificationToken;
+    return ret;
+  }},
+  toObject: { virtuals: true }
 });
 
-// Indexes for better performance
-UserSchema.index({ email: 1 });
-UserSchema.index({ role: 1 });
+// ==================== VIRTUALS ====================
+userSchema.virtual('fullName').get(function() { return `${this.firstName} ${this.lastName}`; });
+userSchema.virtual('age').get(function() {
+  if (!this.dateOfBirth) return null;
+  const today = new Date();
+  const birthDate = new Date(this.dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
+  return age;
+});
 
-// Pre-save middleware to hash password
-UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
-  }
+// ==================== INDEXES ====================
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ isActive: 1 });
+userSchema.index({ assignedTherapist: 1 });
+userSchema.index({ parentId: 1 });
 
-  const salt = await bcrypt.genSalt(10);
+// ==================== MIDDLEWARE ====================
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Method to check password
-UserSchema.methods.matchPassword = async function(enteredPassword) {
+// ==================== INSTANCE METHODS ====================
+userSchema.methods.comparePassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('User', UserSchema);
+userSchema.methods.getResetPasswordToken = function() {
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  return resetToken;
+};
+
+userSchema.methods.getEmailVerificationToken = function() {
+  const token = crypto.randomBytes(20).toString('hex');
+  this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  return token;
+};
+
+module.exports = mongoose.model('User', userSchema);
