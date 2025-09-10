@@ -19,12 +19,8 @@ exports.register = async (req, res) => {
       firstName,
       lastName,
       email,
-      password,
-      role = 'child',
-      phoneNumber,
-      dateOfBirth,
-      gender
-    } = req.body;
+      password
+    } = req.body; // strictly validated by middleware
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -32,11 +28,16 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email already in use' });
     }
 
+    // Determine role: default to 'child'. Only superuser may create roles other than 'child'
+    let requestedRole = 'child';
+    if (req.user && req.user.role === 'superuser' && typeof req.body.role === 'string') {
+      // superuser can explicitly set role; otherwise we keep 'child'
+      requestedRole = req.body.role;
+    }
+
     // Enforce who can register which roles
     const requester = req.user || null;
-    const requestedRole = role;
 
-    // Only superuser can create hospital and therapist directly; hospital can create therapist and child; anyone can create child for self-registration
     if (requestedRole === 'superuser') {
       if (!requester || requester.role !== 'superuser') {
         return res.status(403).json({ success: false, error: 'Only superuser can create superuser' });
@@ -55,56 +56,13 @@ exports.register = async (req, res) => {
       }
     }
 
-    if (requestedRole === 'child') {
-      // child can be self-registered or created by hospital/superuser
-      // no extra restriction here
-    }
-
-    // Determine hospital linkage
-    let effectiveHospitalId = null;
-    if (requester && requester.role === 'hospital') {
-      effectiveHospitalId = requester._id;
-    } else if (requester && requester.role === 'superuser' && req.body.hospitalId) {
-      effectiveHospitalId = req.body.hospitalId;
-    } else if (requestedRole === 'hospital') {
-      effectiveHospitalId = null;
-    } else if (req.body.hospitalId) {
-      effectiveHospitalId = req.body.hospitalId;
-    }
-
-    // Create new user with all defaults
+    // Create new user with minimal, safe defaults
     const user = await User.create({
       firstName,
       lastName,
       email,
       password,
-      role: requestedRole,
-      hospitalId: effectiveHospitalId || null,
-      phoneNumber: phoneNumber || null,
-      dateOfBirth: dateOfBirth || null,
-      gender: gender || 'prefer-not-to-say',
-      childrenIds: [],
-      assignedPatients: [],
-      currentGoals: [],
-      notifications: {
-        email: true,
-        sms: false,
-        push: true,
-        activityReminders: true,
-        progressUpdates: true
-      },
-      stats: {
-        totalActivitiesCompleted: 0,
-        totalTimeSpent: 0,
-        averageScore: 0,
-        currentStreak: 0,
-        longestStreak: 0
-      },
-      medicalHistory: {
-        currentLevel: 'beginner',
-        totalActivitiesCompleted: 0,
-        totalTherapyHours: 0
-      }
+      role: requestedRole
     });
 
     // Generate token
@@ -118,13 +76,7 @@ exports.register = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role,
-        childrenIds: user.childrenIds,
-        assignedPatients: user.assignedPatients,
-        currentGoals: user.currentGoals,
-        notifications: user.notifications,
-        stats: user.stats,
-        medicalHistory: user.medicalHistory
+        role: user.role
       }
     });
   } catch (error) {

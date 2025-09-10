@@ -45,6 +45,16 @@ const authRoutes = require('./routes/api/auth'); // ✅ path is correct
 app.use('/api/auth', authRoutes);
 console.log('✅ Auth routes loaded successfully at /api/auth');
 
+// Children routes
+const childrenRoutes = require('./routes/api/children');
+app.use('/api/children', childrenRoutes);
+console.log('✅ Children routes loaded successfully at /api/children');
+
+// Patient details routes
+const patientDetailsRoutes = require('./routes/api/patientDetails');
+app.use('/api/patient-details', patientDetailsRoutes);
+console.log('✅ Patient details routes loaded successfully at /api/patient-details');
+
 // Add other routes as you create them
 // app.use('/api/users', require('./routes/users'));
 // app.use('/api/activities', require('./routes/activities'));

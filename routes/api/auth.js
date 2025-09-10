@@ -12,18 +12,19 @@ const {
 
 // Import middleware
 const { protect } = require('../../middleware/auth');
+const { validateRegistration, validateLogin } = require('../../middleware/validation');
 
 
 // ==================== PUBLIC ROUTES ====================
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', register);
+router.post('/register', validateRegistration, register);
 
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
-router.post('/login', login);
+router.post('/login', validateLogin, login);
 
 // ==================== PROTECTED ROUTES ====================
 // @route   GET /api/auth/profile

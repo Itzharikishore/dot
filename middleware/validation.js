@@ -21,8 +21,23 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// Registration validation
+// Helper: allow only specific keys on req.body
+const allowOnlyBodyKeys = (allowedKeys) => (req, res, next) => {
+  const keys = Object.keys(req.body || {});
+  const extras = keys.filter(k => !allowedKeys.includes(k));
+  if (extras.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Unexpected fields in request body',
+      errors: extras.map(k => ({ field: k, message: 'Field is not allowed' }))
+    });
+  }
+  next();
+};
+
+// Registration validation (strict)
 const validateRegistration = [
+  allowOnlyBodyKeys(['firstName', 'lastName', 'email', 'password']),
   body('firstName')
     .notEmpty()
     .withMessage('First name is required')
@@ -49,20 +64,6 @@ const validateRegistration = [
     .withMessage('Password must be at least 6 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-    
-  body('role')
-    .isIn(['superuser', 'hospital', 'therapist', 'child'])
-    .withMessage('Role must be superuser, hospital, therapist, or child'),
-
-  body('hospitalId')
-    .optional()
-    .isMongoId()
-    .withMessage('hospitalId must be a valid Mongo ID'),
-    
-  body('phone')
-    .optional()
-    .isMobilePhone()
-    .withMessage('Please provide a valid phone number'),
     
   handleValidationErrors
 ];
@@ -151,5 +152,6 @@ module.exports = {
   validatePasswordReset,
   validateNewPassword,
   validateProfileUpdate,
-  handleValidationErrors
+  handleValidationErrors,
+  allowOnlyBodyKeys
 };
