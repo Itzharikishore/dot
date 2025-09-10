@@ -69,6 +69,19 @@ const authorize = (...roles) => {
       });
     }
 
+    // Superuser always allowed
+    if (req.user.role === 'superuser') {
+      return next();
+    }
+
+    // Hospitals can act as admins for hospital-scoped routes if 'hospital' or 'therapist' or 'child' roles are allowed
+    if (req.user.role === 'hospital') {
+      // if route allows hospital or route is intended for therapist/child management
+      if (roles.includes('hospital') || roles.includes('therapist') || roles.includes('child')) {
+        return next();
+      }
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
@@ -98,6 +111,7 @@ const authorizeOwnerOrRole = (...allowedRoles) => {
     if (userIdStr === resourceIdStr) return next();
 
     // Role check
+    if (req.user.role === 'superuser') return next();
     if (allowedRoles.includes(req.user.role)) return next();
 
     // Therapist check
@@ -107,12 +121,14 @@ const authorizeOwnerOrRole = (...allowedRoles) => {
     )
       return next();
 
-    // Parent check
-    if (
-      req.user.role === "parent" &&
-      req.user.childrenIds?.some((id) => id.toString() === resourceIdStr)
-    )
-      return next();
+    // Hospital check: can manage therapist and child under same hospital
+    if (req.user.role === 'hospital') {
+      // We need to load the target user to verify same hospital
+      // Attach a lightweight check using req.targetUser if a previous middleware set it; otherwise continue restriction
+      if (req.targetUser && req.targetUser.hospitalId && req.targetUser.hospitalId.toString() === req.user._id.toString()) {
+        return next();
+      }
+    }
 
     return res.status(403).json({
       success: false,

@@ -51,8 +51,13 @@ const validateRegistration = [
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
     
   body('role')
-    .isIn(['patient', 'parent', 'therapist'])
-    .withMessage('Role must be patient, parent, or therapist'),
+    .isIn(['superuser', 'hospital', 'therapist', 'child'])
+    .withMessage('Role must be superuser, hospital, therapist, or child'),
+
+  body('hospitalId')
+    .optional()
+    .isMongoId()
+    .withMessage('hospitalId must be a valid Mongo ID'),
     
   body('phone')
     .optional()

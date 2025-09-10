@@ -2,6 +2,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database'); // make sure you have this
 require('dotenv').config();
+const User = require('./models/User');
 
 const app = express();
 
@@ -11,6 +12,31 @@ app.use(cookieParser());
 
 // ==================== DATABASE ====================
 connectDB();
+
+// ==================== STARTUP SEEDING ====================
+(async () => {
+  try {
+    const existingSuperuser = await User.findOne({ role: 'superuser' });
+    if (!existingSuperuser) {
+      console.log('🛠️  No superuser found. Creating default superuser...');
+      const email = process.env.SUPERUSER_EMAIL || 'admin@admin.com';
+      const password = process.env.SUPERUSER_PASSWORD || 'admin123';
+      await User.create({
+        firstName: 'Admin',
+        lastName: 'User',
+        email,
+        password,
+        role: 'superuser',
+        isEmailVerified: true,
+      });
+      console.log(`✅ Default superuser created. Email: ${email} Password: ${password}`);
+    } else {
+      console.log('🛡️  Superuser already exists. Skipping seeding.');
+    }
+  } catch (err) {
+    console.error('❌ Failed to seed superuser:', err.message);
+  }
+})();
 
 // ==================== API ROUTES ====================
 

@@ -11,7 +11,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6, select: false },
 
   // ==================== ROLE & PERMISSIONS ====================
-  role: { type: String, enum: ['patient', 'parent', 'therapist', 'admin', 'superadmin'], default: 'patient' },
+  role: { type: String, enum: ['superuser', 'hospital', 'therapist', 'child'], default: 'child' },
+  hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
   // ==================== CONTACT ====================
   phoneNumber: { type: String, trim: true, match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please provide a valid phone number'], default: null },
