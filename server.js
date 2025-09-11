@@ -55,6 +55,21 @@ const patientDetailsRoutes = require('./routes/api/patientDetails');
 app.use('/api/patient-details', patientDetailsRoutes);
 console.log('✅ Patient details routes loaded successfully at /api/patient-details');
 
+// Activities routes
+const activitiesRoutes = require('./routes/api/activities');
+app.use('/api/activities', activitiesRoutes);
+console.log('✅ Activities routes loaded successfully at /api/activities');
+
+// Notifications routes
+const notificationsRoutes = require('./routes/api/notifications');
+app.use('/api/notifications', notificationsRoutes);
+console.log('✅ Notifications routes loaded successfully at /api/notifications');
+
+// Activity assignments routes
+const activityAssignmentsRoutes = require('./routes/api/activityAssignments');
+app.use('/api/activity-assignments', activityAssignmentsRoutes);
+console.log('✅ Activity assignments routes loaded successfully at /api/activity-assignments');
+
 // Add other routes as you create them
 // app.use('/api/users', require('./routes/users'));
 // app.use('/api/activities', require('./routes/activities'));

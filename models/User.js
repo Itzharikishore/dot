@@ -61,6 +61,7 @@ const userSchema = new mongoose.Schema({
     activityReminders: { type: Boolean, default: true },
     progressUpdates: { type: Boolean, default: true }
   },
+  deviceTokens: { type: [String], default: [] },
 
   // ==================== SECURITY ====================
   passwordResetToken: String,
@@ -112,6 +113,7 @@ userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ assignedTherapist: 1 });
 userSchema.index({ parentId: 1 });
+userSchema.index({ deviceTokens: 1 });
 
 // ==================== MIDDLEWARE ====================
 userSchema.pre('save', async function(next) {

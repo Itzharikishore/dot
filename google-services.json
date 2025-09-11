@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "986445440183",
+    "project_id": "dot-occupational-therapy-dddc2",
+    "storage_bucket": "dot-occupational-therapy-dddc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:986445440183:android:3168899a0f90ac2ed0d932",
+        "android_client_info": {
+          "package_name": "com.dottherapy.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhAkJUSPO8jdgLh4o13al1PSRYdvX5e8I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

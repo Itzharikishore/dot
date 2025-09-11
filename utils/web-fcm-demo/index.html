@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>FCM Web Token Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;max-width:720px;margin:32px auto;padding:0 16px}button{padding:10px 14px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:12px;border-radius:8px;border:1px solid #eee}</style>
+  </head>
+  <body>
+    <h1>FCM Web Token Demo</h1>
+    <p>Click the button to request permission and fetch an FCM token.</p>
+    <button id="get">Get FCM Token</button>
+    <h3>Output</h3>
+    <pre id="out"></pre>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAhAkJUSPO8jdgLh4o13al1PSRYdvX5e8I",
+        authDomain: "dot-occupational-therapy-dddc2.firebaseapp.com",
+        projectId: "dot-occupational-therapy-dddc2",
+        storageBucket: "dot-occupational-therapy-dddc2.appspot.com",
+        messagingSenderId: "986445440183",
+        appId: "1:986445440183:web:24c1f1cc3ce58553d0d932"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const messaging = getMessaging(app);
+
+      document.getElementById('get').onclick = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/utils/web-fcm-demo/firebase-messaging-sw.js', { scope: '/utils/web-fcm-demo/' });
+          await navigator.serviceWorker.ready;
+          const token = await getToken(messaging, { 
+            vapidKey: "BAG1NXhhFvrHJ4eVNrSpdg4U80JIaIfUbdr9oP7FxGwS7NuXJdoazr0If4b7OsD8_XGbMX0MFQVSOObteiBRpKU",
+            serviceWorkerRegistration: registration
+          });
+          document.getElementById('out').textContent = "FCM token:\n" + token;
+          console.log('FCM token:', token);
+        } catch (e) {
+          document.getElementById('out').textContent = (e && e.message) ? e.message : String(e);
+          console.error(e);
+        }
+      };
+
+      onMessage(messaging, (payload) => {
+        console.log('Foreground message:', payload);
+      });
+    </script>
+  </body>
+</html>
