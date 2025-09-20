@@ -1,8 +1,10 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const swaggerUi = require('swagger-ui-express');
 const connectDB = require('./config/database'); // make sure you have this
 require('dotenv').config();
 const User = require('./models/User');
+const swaggerSpecs = require('./config/swagger');
 
 const app = express();
 
@@ -38,6 +40,23 @@ connectDB();
   }
 })();
 
+// ==================== SWAGGER DOCUMENTATION ====================
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'DOT Therapy API Documentation'
+}));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'DOT Therapy API is running!', 
+    timestamp: new Date().toISOString(),
+    documentation: '/api/docs'
+  });
+});
+
 // ==================== API ROUTES ====================
 
 // Auth routes
@@ -69,6 +88,11 @@ console.log('✅ Notifications routes loaded successfully at /api/notifications'
 const activityAssignmentsRoutes = require('./routes/api/activityAssignments');
 app.use('/api/activity-assignments', activityAssignmentsRoutes);
 console.log('✅ Activity assignments routes loaded successfully at /api/activity-assignments');
+
+// Home programs routes
+const homeProgramsRoutes = require('./routes/api/homePrograms');
+app.use('/api/home-programs', homeProgramsRoutes);
+console.log('✅ Home programs routes loaded successfully at /api/home-programs');
 
 // Add other routes as you create them
 // app.use('/api/users', require('./routes/users'));
@@ -123,7 +147,7 @@ app.use('*', (req, res) => {
     success: false,
     message: `🔍 Route '${req.originalUrl}' not found`,
     availableRoutes: {
-      public: ['/', '/api/health', '/api/db-test'],
+      public: ['/api/health', '/api/docs'],
       auth: ['/api/auth/register', '/api/auth/login', '/api/auth/profile'],
       protected: ['All other routes require authentication']
     },
