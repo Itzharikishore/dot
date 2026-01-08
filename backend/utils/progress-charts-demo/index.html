@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Tracking Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 5px;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Progress Tracking Demo</h1>
+        <p>This demo shows how to integrate with the Progress Tracking API to create charts and analytics.</p>
+        
+        <div class="form-group">
+            <label for="apiUrl">API Base URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:5000/api" placeholder="http://localhost:5000/api">
+        </div>
+        
+        <div class="form-group">
+            <label for="authToken">JWT Token:</label>
+            <input type="text" id="authToken" placeholder="Enter your JWT token">
+        </div>
+        
+        <div class="form-group">
+            <label for="userId">User ID:</label>
+            <input type="text" id="userId" placeholder="Enter user ID">
+        </div>
+        
+        <button onclick="loadProgressData()">Load Progress Data</button>
+        <button onclick="loadAnalytics()">Load Analytics</button>
+        <button onclick="createSampleProgress()">Create Sample Progress</button>
+        
+        <div id="message"></div>
+    </div>
+
+    <div class="container">
+        <h2>Progress Summary</h2>
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be populated here -->
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Progress Over Time</h2>
+        <div class="chart-container">
+            <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Mood Distribution</h2>
+        <div class="chart-container">
+            <canvas id="moodChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Difficulty Distribution</h2>
+        <div class="chart-container">
+            <canvas id="difficultyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Milestone Progress</h2>
+        <div class="chart-container">
+            <canvas id="milestoneChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let progressChart, moodChart, difficultyChart, milestoneChart;
+        
+        // API Helper Functions
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const url = document.getElementById('apiUrl').value + endpoint;
+            const token = document.getElementById('authToken').value;
+            
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.message || 'API call failed');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage('Error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+        
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+        }
+        
+        // Load Progress Data
+        async function loadProgressData() {
+            try {
+                const userId = document.getElementById('userId').value;
+                if (!userId) {
+                    showMessage('Please enter a User ID', 'error');
+                    return;
+                }
+                
+                const data = await apiCall(`/progress/${userId}`);
+                displayProgressSummary(data.data.summary);
+                showMessage('Progress data loaded successfully');
+            } catch (error) {
+                showMessage('Failed to load progress data: ' + error.message, 'error');
+            }
+        }
+        
+        // Load Analytics
+        async function loadAnalytics() {
+            try {
+                const userId = document.getElementById('userId').value;
+                if (!userId) {
+                    showMessage('Please enter a User ID', 'error');
+                    return;
+                }
+                
+                const data = await apiCall(`/progress/analytics/${userId}?days=30`);
+                displayAnalytics(data.data);
+                showMessage('Analytics loaded successfully');
+            } catch (error) {
+                showMessage('Failed to load analytics: ' + error.message, 'error');
+            }
+        }
+        
+        // Display Progress Summary
+        function displayProgressSummary(summary) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${summary.totalEntries}</div>
+                    <div class="stat-label">Total Entries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${summary.averageProgress.toFixed(1)}%</div>
+                    <div class="stat-label">Average Progress</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${summary.maxProgress}%</div>
+                    <div class="stat-label">Max Progress</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${Math.round(summary.totalTimeSpent / 60)}h</div>
+                    <div class="stat-label">Total Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${summary.completedMilestones}</div>
+                    <div class="stat-label">Completed Milestones</div>
+                </div>
+            `;
+        }
+        
+        // Display Analytics
+        function displayAnalytics(analytics) {
+            // Progress Over Time Chart
+            createProgressChart(analytics.dailyProgress);
+            
+            // Mood Distribution Chart
+            createMoodChart(analytics.moodDistribution);
+            
+            // Difficulty Distribution Chart
+            createDifficultyChart(analytics.difficultyDistribution);
+            
+            // Milestone Distribution Chart
+            createMilestoneChart(analytics.milestoneDistribution);
+        }
+        
+        // Create Progress Chart
+        function createProgressChart(dailyProgress) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            
+            if (progressChart) {
+                progressChart.destroy();
+            }
+            
+            const labels = dailyProgress.map(d => d.date);
+            const progressData = dailyProgress.map(d => d.progress);
+            const timeData = dailyProgress.map(d => d.timeSpent);
+            
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Progress %',
+                        data: progressData,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Time Spent (min)',
+                        data: timeData,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 0,
+                            max: 100
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create Mood Chart
+        function createMoodChart(moodDistribution) {
+            const ctx = document.getElementById('moodChart').getContext('2d');
+            
+            if (moodChart) {
+                moodChart.destroy();
+            }
+            
+            const labels = Object.keys(moodDistribution);
+            const data = Object.values(moodDistribution);
+            const colors = ['#28a745', '#20c997', '#ffc107', '#fd7e14', '#dc3545'];
+            
+            moodChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create Difficulty Chart
+        function createDifficultyChart(difficultyDistribution) {
+            const ctx = document.getElementById('difficultyChart').getContext('2d');
+            
+            if (difficultyChart) {
+                difficultyChart.destroy();
+            }
+            
+            const labels = Object.keys(difficultyDistribution);
+            const data = Object.values(difficultyDistribution);
+            const colors = ['#28a745', '#ffc107', '#dc3545'];
+            
+            difficultyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Activities',
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create Milestone Chart
+        function createMilestoneChart(milestoneDistribution) {
+            const ctx = document.getElementById('milestoneChart').getContext('2d');
+            
+            if (milestoneChart) {
+                milestoneChart.destroy();
+            }
+            
+            const labels = Object.keys(milestoneDistribution);
+            const data = Object.values(milestoneDistribution);
+            const colors = ['#007bff', '#6f42c1', '#e83e8c', '#fd7e14', '#28a745'];
+            
+            milestoneChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create Sample Progress
+        async function createSampleProgress() {
+            try {
+                const userId = document.getElementById('userId').value;
+                if (!userId) {
+                    showMessage('Please enter a User ID', 'error');
+                    return;
+                }
+                
+                // You'll need to replace this with an actual program ID
+                const sampleData = {
+                    programId: "60f7b3b3b3b3b3b3b3b3b3b3", // Replace with actual program ID
+                    progressPercentage: Math.floor(Math.random() * 100),
+                    completedTasks: [`Sample Task ${Math.floor(Math.random() * 10) + 1}`],
+                    notes: "Sample progress entry created via demo",
+                    milestone: ["started", "quarter", "half", "three-quarters", "completed"][Math.floor(Math.random() * 5)],
+                    score: Math.floor(Math.random() * 100),
+                    timeSpent: Math.floor(Math.random() * 120) + 10,
+                    difficulty: ["easy", "medium", "hard"][Math.floor(Math.random() * 3)],
+                    mood: ["excellent", "good", "okay", "difficult", "frustrated"][Math.floor(Math.random() * 5)],
+                    tags: ["demo", "sample"],
+                    isPublic: false
+                };
+                
+                await apiCall('/progress', 'POST', sampleData);
+                showMessage('Sample progress entry created successfully');
+                
+                // Reload data
+                setTimeout(() => {
+                    loadProgressData();
+                    loadAnalytics();
+                }, 1000);
+                
+            } catch (error) {
+                showMessage('Failed to create sample progress: ' + error.message, 'error');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showMessage('Progress Tracking Demo loaded. Please enter your API details and User ID.');
+        });
+    </script>
+</body>
+</html>
+
+
